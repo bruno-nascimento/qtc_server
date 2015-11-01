@@ -7,3 +7,41 @@
     "socket.io": "latest"
   }
 }
+
+{
+  "name": "qtc_server",
+  "version": "0.0.1",
+  "description": "Servidor QTC",
+  "keywords": [
+    "Node.js",
+    "chat",
+    "app",
+    "openshift"
+  ],
+  "author": {
+    "name": "Bruno Nascimento",
+    "email": "brunocn80@gmail.com",
+    "url": "https://br.linkedin.com/pub/bruno-caldeira-do-nascimento/16/840/a21"
+  },
+  "homepage": "http://server-qtcapp.rhcloud.com/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bruno-nascimento/qtc_server"
+  },
+
+  "engines": {
+    "node": ">= 0.6.0",
+    "npm": ">= 1.0.0"
+  },
+
+  "dependencies": {
+    "express": "latest",
+    "mongoose": "latest",
+    "socket.io": "latest"
+  },
+  "devDependencies": {},
+  "bundleDependencies": [],
+
+  "private": true,
+  "main": "server.js"
+}
