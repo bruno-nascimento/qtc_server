@@ -1,15 +1,5 @@
 {
   "name": "qtc_server",
-  "main": "server.js",
-  "dependencies": {
-    "mongoose": "latest",
-    "morgan": "latest",
-    "socket.io": "latest"
-  }
-}
-
-{
-  "name": "qtc_server",
   "version": "0.0.1",
   "description": "Servidor QTC",
   "keywords": [
