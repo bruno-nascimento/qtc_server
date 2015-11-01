@@ -7,12 +7,18 @@ var mongoose = require('mongoose');
 var app      = express();
 var server   = require('http').Server(app);
 var io       = require('socket.io')(server);
-
 var path = require('path');  
 
 var self = this;
 
-//app.use(express.static(__dirname + '/public'));
+self.mongo = {};
+self.mongo.host = process.env.OPENSHIFT_MONGODB_DB_HOST ? process.env.OPENSHIFT_MONGODB_DB_HOST : '127.0.0.1'; 
+self.mongo.port = process.env.OPENSHIFT_MONGODB_DB_PORT || 27017;
+self.mongo.db = 'server';
+self.mongo.user = 'admin';
+self.mongo.pass = '28jvPKgkTb7f';
+
+//app.use(express.static(__dirname + '/static'));
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
@@ -21,7 +27,63 @@ app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, './static', 'index.html'));
 });
 
-//mongoose.connect("mongodb://127.0.0.1:27017/scotch-chat");
+app.get('/user_test', function(req, res){
+    res.json(usuario_teste);
+});
+
+/* MONGO */ 
+mongoose.connect("mongodb://"+self.mongo.user+":"+self.mongo.pass+"@"+self.mongo.host+":"+self.mongo.port+"/"+self.mongo.db);
+
+// usuario = {
+//     id,
+//     apelido,
+//     nome,
+//     email,
+//     senha,
+//     usuarios_amigos[],
+//     bloqueados[],
+//     perfil = {
+//         foto,
+//         data_nascimento,
+//         cidade,
+//         estuda,
+//         trabalha,
+//         cargo,
+//         hobbies[],
+//         naturalDe,
+//         facebook,
+//         twitter,
+//         frase
+//     }
+// }
+
+var usuarioSchema = mongoose.Schema({ apelido: String, nome: String, email: String, senha: String, 
+    amigos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' }], bloqueados: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' }] });
+var Usuario = mongoose.model('Usuario', usuarioSchema);
+
+Usuario.collection.remove();
+
+var usuario_teste = new Usuario({apelido: 'teste', nome: 'teste da silva', email: 'teste@teste.com', senha: 'teste', amigos: [], bloqueados: []});
+
+var usuario_bloqueado = new Usuario({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
+
+usuario_teste.bloqueados.push(usuario_bloqueado);
+
+usuario_bloqueado.save(function (err) {
+  if (err) return handleError(err);
+});
+
+usuario_teste.save(function (err) {
+  if (err) return handleError(err);
+});
+
+Usuario
+.findOne({ apelido: 'teste' })
+.populate('bloqueados')
+.exec(function (err, usuario) {
+  if (err) return handleError(err);
+  console.log(">>>>>>>>>>>>>>> USUARIOOOOOOOOOOOOOOO :: ", usuario);
+});
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
