@@ -9,14 +9,9 @@ var server   = require('http').Server(app);
 var io       = require('socket.io')(server);
 var path = require('path');  
 
-var self = this;
+var config = require('./qtc_libs/config.js');
 
-self.mongo = {};
-self.mongo.host = process.env.OPENSHIFT_MONGODB_DB_HOST ? process.env.OPENSHIFT_MONGODB_DB_HOST : '127.0.0.1'; 
-self.mongo.port = process.env.OPENSHIFT_MONGODB_DB_PORT || 27017;
-self.mongo.db = 'server';
-self.mongo.user = 'admin';
-self.mongo.pass = '28jvPKgkTb7f';
+var self = this;
 
 //app.use(express.static(__dirname + '/static'));
 
@@ -32,7 +27,7 @@ app.get('/user_test', function(req, res){
 });
 
 /* MONGO */ 
-mongoose.connect("mongodb://"+self.mongo.user+":"+self.mongo.pass+"@"+self.mongo.host+":"+self.mongo.port+"/"+self.mongo.db);
+mongoose.connect(config.mongo.getConnectionUrl());
 
 // usuario = {
 //     id,
@@ -79,7 +74,7 @@ usuario_teste.save(function (err) {
 
 Usuario
 .findOne({ apelido: 'teste' })
-.populate('bloqueados')
+.populate('bloqueados', 'apelido nome')
 .exec(function (err, usuario) {
   if (err) return handleError(err);
   console.log(">>>>>>>>>>>>>>> USUARIOOOOOOOOOOOOOOO :: ", usuario);
@@ -113,19 +108,6 @@ io.on('connection', function(socket){
 
 /* OPENSHIFT */
 
-self.setupVariables = function() {
-    //  Set the environment variables we need.
-    self.ipaddress = process.env.OPENSHIFT_NODEJS_IP;
-    self.port      = process.env.OPENSHIFT_NODEJS_PORT || 8080;
-
-    if (typeof self.ipaddress === "undefined") {
-        //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
-        //  allows us to run/test the app locally.
-        console.warn('No OPENSHIFT_NODEJS_IP var, using 127.0.0.1');
-        self.ipaddress = "127.0.0.1";
-    };
-};
-
 var terminator = function(sig){
     if (typeof sig === "string") {
        console.log('%s: Received %s - terminating sample app ...', Date(Date.now()), sig);
@@ -142,10 +124,8 @@ process.on('exit', function() { terminator(); });
         process.on(element, function() { terminator(element); });
 });
 
-self.setupVariables();
-
-server.listen(self.port, self.ipaddress, function() {
-    console.log('%s: Node server started on %s:%d ...',Date(Date.now()), self.ipaddress, self.port);
+server.listen(config.server.port, config.server.ip, function() {
+    console.log('%s: Node server started on %s:%d ...',new Date(), config.server.ip, config.server.port);
 });
 
 // #!/bin/env node
