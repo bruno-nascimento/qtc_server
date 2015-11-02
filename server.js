@@ -3,15 +3,13 @@
 
 // Import all our dependencies
 var express  = require('express');
-var mongoose = require('mongoose');
 var app      = express();
 var server   = require('http').Server(app);
 var io       = require('socket.io')(server);
 var path = require('path');  
 
 var config = require('./qtc_libs/config.js');
-
-var self = this;
+var mongo = require('./qtc_libs/mongo.js');
 
 //app.use(express.static(__dirname + '/static'));
 
@@ -26,41 +24,11 @@ app.get('/user_test', function(req, res){
     res.json(usuario_teste);
 });
 
-/* MONGO */ 
-mongoose.connect(config.mongo.getConnectionUrl());
+mongo.models.Usuario().collection.remove();
 
-// usuario = {
-//     id,
-//     apelido,
-//     nome,
-//     email,
-//     senha,
-//     usuarios_amigos[],
-//     bloqueados[],
-//     perfil = {
-//         foto,
-//         data_nascimento,
-//         cidade,
-//         estuda,
-//         trabalha,
-//         cargo,
-//         hobbies[],
-//         naturalDe,
-//         facebook,
-//         twitter,
-//         frase
-//     }
-// }
+var usuario_teste = new mongo.models.Usuario()({apelido: 'teste', nome: 'teste da silva', email: 'teste@teste.com', senha: 'teste', amigos: [], bloqueados: []});
 
-var usuarioSchema = mongoose.Schema({ apelido: String, nome: String, email: String, senha: String, 
-    amigos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' }], bloqueados: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Usuario' }] });
-var Usuario = mongoose.model('Usuario', usuarioSchema);
-
-Usuario.collection.remove();
-
-var usuario_teste = new Usuario({apelido: 'teste', nome: 'teste da silva', email: 'teste@teste.com', senha: 'teste', amigos: [], bloqueados: []});
-
-var usuario_bloqueado = new Usuario({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
+var usuario_bloqueado = new mongo.models.Usuario()({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
 
 usuario_teste.bloqueados.push(usuario_bloqueado);
 
@@ -72,13 +40,13 @@ usuario_teste.save(function (err) {
   if (err) return handleError(err);
 });
 
-Usuario
-.findOne({ apelido: 'teste' })
-.populate('bloqueados', 'apelido nome')
-.exec(function (err, usuario) {
-  if (err) return handleError(err);
-  console.log(">>>>>>>>>>>>>>> USUARIOOOOOOOOOOOOOOO :: ", usuario);
-});
+mongo.models.Usuario()
+    .findOne({ apelido: 'teste' })
+    .populate('bloqueados', 'apelido nome')
+    .exec(function (err, usuario) {
+      if (err) return handleError(err);
+      console.log(">>>>>>>>>>>>>>> USUARIOOOOOOOOOOOOOOO :: ", usuario);
+    });
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");

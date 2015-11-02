@@ -5,7 +5,7 @@ var config = {
 		db : 'server',
 		user : 'admin',
 		pass : '28jvPKgkTb7f', //TODO: obvio que isso esta no lugar errado ... refatorar!
-		getConnectionUrl : function(){ return "mongodb://"+this.user+":"+this.pass+"@"+this.ip+":"+this.port+"/"+this.db}
+		getConnectionUrl : function(){ return "mongodb://"+this.user+":"+this.pass+"@"+this.ip+":"+this.port+"/"+this.db} //TODO: string template do es6 não funcionou no projeto
 	},
 	server : {
 		ip : process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1',
