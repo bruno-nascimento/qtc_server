@@ -6,7 +6,8 @@ var express  = require('express');
 var app      = express();
 var server   = require('http').Server(app);
 var io       = require('socket.io')(server);
-var path = require('path');  
+var path = require('path'); 
+var bodyParser = require('body-parser');
 
 var config = require('./qtc_libs/config.js');
 var mongo = require('./qtc_libs/mongo.js');
@@ -15,6 +16,10 @@ var mongo = require('./qtc_libs/mongo.js');
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
+
+app.use(bodyParser.json());         
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.get('/', function(req, res) {
   //send the index.html in our public directory
   res.sendFile(path.join(__dirname, './static', 'index.html'));
@@ -23,6 +28,15 @@ app.get('/', function(req, res) {
 app.get('/user_test', function(req, res){
     res.json(usuario_teste);
 });
+
+app.post('/register_user', function(req, res){
+    console.log(req.body);
+    mongo.models.Usuario().create(req.body, function (err, usuario) {
+      if (err) return next(err);
+        res.json(usuario);
+    });
+});
+
 
 mongo.models.Usuario().collection.remove();
 
@@ -45,7 +59,6 @@ mongo.models.Usuario()
     .populate('bloqueados', 'apelido nome')
     .exec(function (err, usuario) {
       if (err) return handleError(err);
-      console.log(">>>>>>>>>>>>>>> USUARIOOOOOOOOOOOOOOO :: ", usuario);
     });
 
 app.all('*', function(req, res, next) {
