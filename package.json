@@ -27,7 +27,8 @@
   "dependencies": {
     "express": "latest",
     "mongoose": "latest",
-    "socket.io": "latest"
+    "socket.io": "latest",
+    "body-parser": "latest"
   },
   "devDependencies": {},
   "bundleDependencies": [],

@@ -30,7 +30,6 @@ app.get('/user_test', function(req, res){
 });
 
 app.post('/register_user', function(req, res){
-    console.log(req.body);
     mongo.models.Usuario().create(req.body, function (err, usuario) {
       if (err) return next(err);
         res.json(usuario);
