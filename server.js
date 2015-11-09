@@ -12,7 +12,7 @@ var bodyParser = require('body-parser');
 var config = require('./qtc_libs/config.js');
 var mongo = require('./qtc_libs/mongo.js');
 
-//app.use(express.static(__dirname + '/static'));
+app.use(express.static(config.files.dir));
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
@@ -25,40 +25,18 @@ app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, './static', 'index.html'));
 });
 
-app.get('/user_test', function(req, res){
-    res.json(usuario_teste);
+app.get('/rooms', function(req, res){
+    mongo.models.Sala().find().exec().then(function(salas){
+      res.json(salas);
+    });
 });
 
 app.post('/register_user', function(req, res){
     mongo.models.Usuario().create(req.body, function (err, usuario) {
       if (err) return next(err);
-        res.json(usuario);
+      res.json(usuario);
     });
 });
-
-
-mongo.models.Usuario().collection.remove();
-
-var usuario_teste = new mongo.models.Usuario()({apelido: 'teste', nome: 'teste da silva', email: 'teste@teste.com', senha: 'teste', amigos: [], bloqueados: []});
-
-var usuario_bloqueado = new mongo.models.Usuario()({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
-
-usuario_teste.bloqueados.push(usuario_bloqueado);
-
-usuario_bloqueado.save(function (err) {
-  if (err) return handleError(err);
-});
-
-usuario_teste.save(function (err) {
-  if (err) return handleError(err);
-});
-
-mongo.models.Usuario()
-    .findOne({ apelido: 'teste' })
-    .populate('bloqueados', 'apelido nome')
-    .exec(function (err, usuario) {
-      if (err) return handleError(err);
-    });
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -107,6 +85,60 @@ process.on('exit', function() { terminator(); });
 server.listen(config.server.port, config.server.ip, function() {
     console.log('%s: Node server started on %s:%d ...',new Date(), config.server.ip, config.server.port);
 });
+
+
+var teste_usuario = function(){
+  mongo.models.Usuario().collection.remove();
+
+  var usuario_teste = new mongo.models.Usuario()({apelido: 'teste', nome: 'teste da silva', email: 'teste@teste.com', senha: 'teste', amigos: [], bloqueados: []});
+
+  var usuario_bloqueado = new mongo.models.Usuario()({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
+
+  usuario_teste.bloqueados.push(usuario_bloqueado);
+
+  usuario_bloqueado.save(function (err) {
+    if (err) return handleError(err);
+  });
+
+  usuario_teste.save(function (err) {
+    if (err) return handleError(err);
+  });
+
+  mongo.models.Usuario()
+    .findOne({ apelido: 'teste' })
+    .populate('bloqueados', 'apelido nome')
+    .exec(function (err, usuario) {
+      if (err) return handleError(err);
+  }).then(function(abc){console.log(abc)});
+
+    return {'usuario' : usuario_teste, 'bloqueado' : usuario_bloqueado};
+}
+
+var usuarios_teste = teste_usuario();
+
+mongo.models.Sala().collection.remove();
+
+var sala_teste = new mongo.models.Sala()({nome: 'sala legal teste', descricao: 'descricao bacana', publica: true});
+
+sala_teste.dono = usuarios_teste.usuario;
+sala_teste.banidos.push(usuarios_teste.bloqueado);
+sala_teste.usuarios.push(usuarios_teste.usuario);
+sala_teste.usuarios.push(usuarios_teste.bloqueado);
+
+sala_teste.save(function (err) {
+  if (err) return handleError(err);
+});
+
+ var sala_from_db = mongo.models.Sala()
+    .findOne({ _id: sala_teste._id })
+    .populate('banidos', 'apelido')
+    .populate('dono', 'apelido')
+    .populate('usuarios', 'apelido')
+    .exec(function (err, usuario) {
+      if (err) return handleError(err);
+  });
+
+sala_from_db.then(function(success){console.log(success)});
 
 // #!/bin/env node
 // //  OpenShift sample Node application

@@ -24,6 +24,12 @@ var mongo = {
 				__models.Usuario = mongo.getConnection().model('Usuario', mongo.schemas().usuarioSchema());
 			}
 			return __models.Usuario;
+		},
+		Sala : function(){
+			if(!__models.Sala){
+				__models.Sala = mongo.getConnection().model('Sala', mongo.schemas().salaSchema());
+			}
+			return __models.Sala;
 		}
 	}
 }
