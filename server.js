@@ -17,7 +17,7 @@ app.use(express.static(config.files.dir));
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
 
-app.use(bodyParser.json());         
+app.use(bodyParser.json({limit: '50mb'}));    
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', function(req, res) {
