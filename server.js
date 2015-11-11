@@ -26,16 +26,24 @@ app.get('/', function(req, res) {
 });
 
 app.get('/rooms', function(req, res){
-    mongo.models.Sala().find().exec().then(function(salas){
-      res.json(salas);
-    });
+  mongo.models.Sala().find().exec().then(function(salas){
+    res.json(salas);
+  });
+});
+
+app.post('/room', function(req, res){
+  console.log(req.body);
+  mongo.models.Sala().create(req.body, function (err, sala) {
+    if (err) return next(err);
+    res.json(sala);
+  });
 });
 
 app.post('/register_user', function(req, res){
-    mongo.models.Usuario().create(req.body, function (err, usuario) {
-      if (err) return next(err);
-      res.json(usuario);
-    });
+  mongo.models.Usuario().create(req.body, function (err, usuario) {
+    if (err) return next(err);
+    res.json(usuario);
+  });
 });
 
 app.all('*', function(req, res, next) {
