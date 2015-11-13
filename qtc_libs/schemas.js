@@ -8,7 +8,7 @@ var schemas = function(mongoose){
 		},
 		salaSchema : function(){
 			return __mongoose.Schema({nome: String, dono: {type: __mongoose.Schema.Types.ObjectId, ref: 'Usuario'},
-									  descricao: String, imagem: {data: Buffer, contentType: String}, publica: Boolean,
+									  descricao: String, imagem: {data: String, contentType: String}, publica: Boolean,
 									  usuarios: [{type: __mongoose.Schema.Types.ObjectId, ref: 'Usuario'}],
 									  banidos: [{type: __mongoose.Schema.Types.ObjectId, ref: 'Usuario'}],
 									  votacoes : [{ banir : Boolean, 

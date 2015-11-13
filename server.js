@@ -11,13 +11,14 @@ var bodyParser = require('body-parser');
 
 var config = require('./qtc_libs/config.js');
 var mongo = require('./qtc_libs/mongo.js');
+var lwip = require('lwip');
 
 app.use(express.static(config.files.dir));
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
 
-app.use(bodyParser.json({limit: '50mb'}));    
+app.use(bodyParser.json({limit: '5mb'}));    
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', function(req, res) {
@@ -26,16 +27,43 @@ app.get('/', function(req, res) {
 });
 
 app.get('/rooms', function(req, res){
+
   mongo.models.Sala().find().exec().then(function(salas){
     res.json(salas);
   });
+
 });
 
 app.post('/room', function(req, res){
-  console.log(req.body);
-  mongo.models.Sala().create(req.body, function (err, sala) {
-    if (err) return next(err);
-    res.json(sala);
+  if(!req.body.imagem){
+    mongo.models.Sala().create(req.body, function (err, sala) {
+      if (err) return next(err);
+        res.json(201);
+    });
+    return;
+  }
+
+  //[0] = regex usada para o replace; [1] = type da imagem
+  var imageTypeMatches = req.body.imagem.match(/^data:image\/(.*);base64,/,'');
+  var clean_base64_image = req.body.imagem.replace(imageTypeMatches[0],'');
+
+  var binaryData = new Buffer(clean_base64_image, 'base64');
+
+  lwip.open(binaryData, imageTypeMatches[1], function(err, image){
+    var img_factor = 40/(image.height() < image.width() ? image.height() : image.width());
+    image.batch()
+      .scale(img_factor)          // scale to 75%
+      .toBuffer(imageTypeMatches[1], function(err, buffer){
+        var sala_request = req.body;
+        if(err){
+          sala_request.imagem = {}
+        }
+        sala_request.imagem = {data : new Buffer(buffer, 'binary').toString('base64'), contentType : imageTypeMatches[1]}
+        mongo.models.Sala().create(sala_request, function (err, sala) {
+          if (err) return next(err);
+            res.json(201);
+        });
+      });
   });
 });
 
@@ -117,36 +145,39 @@ var teste_usuario = function(){
     .populate('bloqueados', 'apelido nome')
     .exec(function (err, usuario) {
       if (err) return handleError(err);
-  }).then(function(abc){console.log(abc)});
+  }).then(function(usuario){console.log(usuario)});
 
     return {'usuario' : usuario_teste, 'bloqueado' : usuario_bloqueado};
 }
 
-var usuarios_teste = teste_usuario();
+var executar_teste_sala = function(){
+  var usuarios_teste = teste_usuario();
 
-mongo.models.Sala().collection.remove();
+  mongo.models.Sala().collection.remove();
 
-var sala_teste = new mongo.models.Sala()({nome: 'sala legal teste', descricao: 'descricao bacana', publica: true});
+  var sala_teste = new mongo.models.Sala()({nome: 'sala legal teste', descricao: 'descricao bacana', publica: true});
 
-sala_teste.dono = usuarios_teste.usuario;
-sala_teste.banidos.push(usuarios_teste.bloqueado);
-sala_teste.usuarios.push(usuarios_teste.usuario);
-sala_teste.usuarios.push(usuarios_teste.bloqueado);
+  sala_teste.dono = usuarios_teste.usuario;
+  sala_teste.banidos.push(usuarios_teste.bloqueado);
+  sala_teste.usuarios.push(usuarios_teste.usuario);
+  sala_teste.usuarios.push(usuarios_teste.bloqueado);
 
-sala_teste.save(function (err) {
-  if (err) return handleError(err);
-});
-
- var sala_from_db = mongo.models.Sala()
-    .findOne({ _id: sala_teste._id })
-    .populate('banidos', 'apelido')
-    .populate('dono', 'apelido')
-    .populate('usuarios', 'apelido')
-    .exec(function (err, usuario) {
-      if (err) return handleError(err);
+  sala_teste.save(function (err) {
+    if (err) return handleError(err);
   });
 
-sala_from_db.then(function(success){console.log(success)});
+   var sala_from_db = mongo.models.Sala()
+      .findOne({ _id: sala_teste._id })
+      .populate('banidos', 'apelido')
+      .populate('dono', 'apelido')
+      .populate('usuarios', 'apelido')
+      .exec(function (err, usuario) {
+        if (err) return handleError(err);
+    });
+
+  sala_from_db.then(function(success){console.log(success)});  
+}
+
 
 // #!/bin/env node
 // //  OpenShift sample Node application
