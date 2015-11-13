@@ -35,6 +35,7 @@ app.get('/rooms', function(req, res){
 });
 
 app.post('/room', function(req, res){
+  console.log(req.body);
   if(!req.body.imagem){
     mongo.models.Sala().create(req.body, function (err, sala) {
       if (err) return next(err);
