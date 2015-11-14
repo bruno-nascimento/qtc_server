@@ -51,7 +51,7 @@ app.post('/room', function(req, res){
   var binaryData = new Buffer(clean_base64_image, 'base64');
 
   lwip.open(binaryData, imageTypeMatches[1], function(err, image){
-    var img_factor = 40/(image.height() < image.width() ? image.height() : image.width());
+    var img_factor = 56.5/(image.height() < image.width() ? image.height() : image.width());
     image.batch()
       .scale(img_factor)          // scale to 75%
       .toBuffer(imageTypeMatches[1], function(err, buffer){
