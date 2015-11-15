@@ -5,7 +5,7 @@
 var express  = require('express');
 var app      = express();
 var server   = require('http').Server(app);
-var io       = require('socket.io')(server);
+var io       = require('socket.io')(server, {origins:'*:*'});
 var path = require('path'); 
 var bodyParser = require('body-parser');
 
@@ -44,7 +44,7 @@ app.post('/room', function(req, res){
     return;
   }
 
-  //[0] = regex usada para o replace; [1] = type da imagem
+  //[0] = usado para o replace; [1] = extensao da imagem
   var imageTypeMatches = req.body.imagem.match(/^data:image\/(.*);base64,/,'');
   var clean_base64_image = req.body.imagem.replace(imageTypeMatches[0],'');
 
@@ -53,7 +53,7 @@ app.post('/room', function(req, res){
   lwip.open(binaryData, imageTypeMatches[1], function(err, image){
     var img_factor = 56.5/(image.height() < image.width() ? image.height() : image.width());
     image.batch()
-      .scale(img_factor)          // scale to 75%
+      .scale(img_factor)
       .toBuffer(imageTypeMatches[1], function(err, buffer){
         var sala_request = req.body;
         if(err){
@@ -77,13 +77,10 @@ app.post('/register_user', function(req, res){
 
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-type,Accept,X-Access-Token,X-Key');
-  if (req.method == 'OPTIONS') {
-    res.status(200).end();
-  } else {
-    next();
-  }
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
+  next();
 });
 
 // server.js
@@ -91,13 +88,34 @@ app.all('*', function(req, res, next) {
 /*||||||||||||||||SOCKET|||||||||||||||||||||||*/
 io.on('connection', function(socket){
 	console.log('a user connected');
-  	socket.on('chat message', function(msg){
-  		console.log(msg);
-    	io.emit('chat message', msg);
-  	});
-  	socket.on('disconnect', function(){
-		console.log('user disconnected');
+	
+  socket.on('chat_message', function(msg){
+    var mensagem = new mongo.models.Mensagem()(msg);
+    mensagem.save().then(function(resultado){
+      io.sockets.in(resultado.sala).emit('chat_message', resultado);
+    }, function(error){
+      console.log('erro ao salvar msg :: ', error);
+    });
 	});
+  
+  socket.on('join', function(msg){
+    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.room*/},{$addToSet: { usuarios: mongo.getConnection().Types.ObjectId(msg.user)}}, function(err, sala){
+      socket.join(msg.room);
+      io.sockets.in(msg.room).emit('new_user', msg.user);
+    });
+  });
+
+  socket.on('leave', function(msg){
+    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.room*/},{$pull: { usuarios: msg.user}}, function(err, sala){
+      socket.leave(msg.room);
+      io.sockets.in(msg.room).emit('user_quit', msg.user);
+    });
+  });
+	
+  socket.on('disconnect', function(){
+	  console.log('user disconnected');
+  });
+
 });
 /*||||||||||||||||||||END SOCKETS||||||||||||||||||*/
 
@@ -131,12 +149,16 @@ var teste_usuario = function(){
 
   var usuario_bloqueado = new mongo.models.Usuario()({apelido: 'bloc', nome: 'bloc', email: 'bloc', senha: 'bloc', amigos: [], bloqueados: []});
 
-  usuario_teste.bloqueados.push(usuario_bloqueado);
+
+  // usuario_teste.bloqueados.push(usuario_bloqueado);
 
   usuario_bloqueado.save(function (err) {
     if (err) return handleError(err);
   });
 
+  var teste_rel_usuario_bloqueado = {'_id' : usuario_bloqueado._id};
+  usuario_teste.bloqueados.push(teste_rel_usuario_bloqueado);
+  
   usuario_teste.save(function (err) {
     if (err) return handleError(err);
   });
@@ -146,9 +168,11 @@ var teste_usuario = function(){
     .populate('bloqueados', 'apelido nome')
     .exec(function (err, usuario) {
       if (err) return handleError(err);
-  }).then(function(usuario){console.log(usuario)});
+    }).then(function(usuario){
+      console.log(usuario)
+  });
 
-    return {'usuario' : usuario_teste, 'bloqueado' : usuario_bloqueado};
+  return {'usuario' : usuario_teste, 'bloqueado' : usuario_bloqueado};
 }
 
 var executar_teste_sala = function(){
@@ -178,6 +202,11 @@ var executar_teste_sala = function(){
 
   sala_from_db.then(function(success){console.log(success)});  
 }
+
+// setTimeout(function(){ 
+//   var resultado = teste_usuario();
+//   console.log(resultado);
+// }, 2000);
 
 
 // #!/bin/env node

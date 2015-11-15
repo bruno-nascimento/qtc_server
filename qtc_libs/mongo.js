@@ -30,8 +30,18 @@ var mongo = {
 				__models.Sala = mongo.getConnection().model('Sala', mongo.schemas().salaSchema());
 			}
 			return __models.Sala;
+		},
+		Mensagem : function(){
+			if(!__models.Mensagem){
+				__models.Mensagem = mongo.getConnection().model('Mensagem', mongo.schemas().mensagemSchema());
+			}
+			return __models.Mensagem;
 		}
 	}
 }
+
+mongo.models.Usuario();
+mongo.models.Sala();
+mongo.models.Mensagem();
 
 module.exports = mongo;
