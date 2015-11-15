@@ -13,11 +13,14 @@ var config = require('./qtc_libs/config.js');
 var mongo = require('./qtc_libs/mongo.js');
 var lwip = require('lwip');
 
-app.use(express.static(config.files.dir));
+
+var USUARIO_QTC = {_id : 'qtc', nome : 'qtc'};
+
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
 
+app.use(express.static(config.files.dir));
 app.use(bodyParser.json({limit: '5mb'}));    
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -85,6 +88,10 @@ app.all('*', function(req, res, next) {
 
 // server.js
 
+var enviarMensagem = function(sala_id, usuarioObj, texto){
+  io.sockets.in(sala_id).emit('chat_message', {'sala' : {'_id': sala_id}, 'usuario' : usuarioObj, 'data': new Date(), 'texto' : texto});
+}
+
 /*||||||||||||||||SOCKET|||||||||||||||||||||||*/
 io.on('connection', function(socket){
 	console.log('a user connected');
@@ -99,16 +106,20 @@ io.on('connection', function(socket){
 	});
   
   socket.on('join', function(msg){
-    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.room*/},{$addToSet: { usuarios: mongo.getConnection().Types.ObjectId(msg.user)}}, function(err, sala){
-      socket.join(msg.room);
-      io.sockets.in(msg.room).emit('new_user', msg.user);
-    });
+    mongo.models.Sala().findByIdAndUpdate({'_id': '5646a5100d030fd52482b758' /*msg.sala*/},{$addToSet: { usuarios: msg.usuario._id}})
+      .populate('usuarios', 'nome')
+      .exec(function(err, sala){
+        socket.join(msg.sala);
+        socket.emit('room_users', sala);
+        socket.broadcast.to(msg.sala).emit('new_user', msg.usuario);
+        enviarMensagem(msg.sala, USUARIO_QTC, '\'<b>'+ msg.usuario.nome +'</b>\' entrou na sala.');
+      });
   });
 
   socket.on('leave', function(msg){
-    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.room*/},{$pull: { usuarios: msg.user}}, function(err, sala){
-      socket.leave(msg.room);
-      io.sockets.in(msg.room).emit('user_quit', msg.user);
+    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.sala*/},{$pull: { usuarios: msg.usuario._id}}, function(err, sala){
+      socket.leave(msg.sala._id);
+      io.sockets.in(msg.sala._id).emit('user_quit', msg.usuario);
     });
   });
 	
@@ -117,6 +128,7 @@ io.on('connection', function(socket){
   });
 
 });
+
 /*||||||||||||||||||||END SOCKETS||||||||||||||||||*/
 
 /* OPENSHIFT */
