@@ -106,7 +106,7 @@ io.on('connection', function(socket){
 	});
   
   socket.on('join', function(msg){
-    mongo.models.Sala().findByIdAndUpdate({'_id': '5646a5100d030fd52482b758' /*msg.sala*/},{$addToSet: { usuarios: msg.usuario._id}})
+    mongo.models.Sala().findByIdAndUpdate({'_id': msg.sala /*'5646a5100d030fd52482b758'*/},{$addToSet: { usuarios: msg.usuario._id}})
       .populate('usuarios', 'nome')
       .exec(function(err, sala){
         socket.join(msg.sala);
@@ -117,7 +117,7 @@ io.on('connection', function(socket){
   });
 
   socket.on('leave', function(msg){
-    mongo.models.Sala().update({'_id': '5646a5100d030fd52482b758' /*msg.sala*/},{$pull: { usuarios: msg.usuario._id}}, function(err, sala){
+    mongo.models.Sala().update({'_id': msg.sala /*'5646a5100d030fd52482b758'*/},{$pull: { usuarios: msg.usuario._id}}, function(err, sala){
       socket.leave(msg.sala._id);
       io.sockets.in(msg.sala._id).emit('user_quit', msg.usuario);
     });
