@@ -13,9 +13,7 @@ var config = require('./qtc_libs/config.js');
 var mongo = require('./qtc_libs/mongo.js');
 var lwip = require('lwip');
 
-
 var USUARIO_QTC = {_id : 'qtc', nome : 'qtc'};
-
 
 /*||||||||||||||||||||||ROUTES|||||||||||||||||||||||||*/
 // route for our index file
@@ -23,6 +21,13 @@ var USUARIO_QTC = {_id : 'qtc', nome : 'qtc'};
 app.use(express.static(config.files.dir));
 app.use(bodyParser.json({limit: '5mb'}));    
 app.use(bodyParser.urlencoded({ extended: true }));
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
+  next();
+});
 
 app.get('/', function(req, res) {
   //send the index.html in our public directory
@@ -38,7 +43,6 @@ app.get('/rooms', function(req, res){
 });
 
 app.post('/room', function(req, res){
-  console.log(req.body);
   if(!req.body.imagem){
     mongo.models.Sala().create(req.body, function (err, sala) {
       if (err) return next(err);
@@ -78,18 +82,19 @@ app.post('/register_user', function(req, res){
   });
 });
 
-app.all('*', function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
-  next();
-});
-
 // server.js
 
 var enviarMensagem = function(sala_id, usuarioObj, texto){
   io.sockets.in(sala_id).emit('chat_message', {'sala' : {'_id': sala_id}, 'usuario' : usuarioObj, 'data': new Date(), 'texto' : texto});
+}
+
+var add_user_join_results = function(usuarios, usuario){
+  for(var i = usuarios.length - 1; i >= 0; i--) {
+    if(usuarios[i]._id === usuario._id) {
+      return;
+    }
+  }
+  usuarios.push(usuario);
 }
 
 /*||||||||||||||||SOCKET|||||||||||||||||||||||*/
@@ -99,27 +104,31 @@ io.on('connection', function(socket){
   socket.on('chat_message', function(msg){
     var mensagem = new mongo.models.Mensagem()(msg);
     mensagem.save().then(function(resultado){
-      io.sockets.in(resultado.sala).emit('chat_message', resultado);
+      msg.data = resultado.data;
+      msg._id = resultado._id;
+      io.sockets.in(resultado.sala).emit('chat_message', msg);
     }, function(error){
       console.log('erro ao salvar msg :: ', error);
     });
 	});
   
   socket.on('join', function(msg){
-    mongo.models.Sala().findByIdAndUpdate({'_id': msg.sala /*'5646a5100d030fd52482b758'*/},{$addToSet: { usuarios: msg.usuario._id}})
+    mongo.models.Sala().findByIdAndUpdate({'_id': msg.sala._id},{$addToSet: { usuarios: msg.usuario._id}})
       .populate('usuarios', 'nome')
       .exec(function(err, sala){
-        socket.join(msg.sala);
+        add_user_join_results(sala.usuarios, msg.usuario);
+        socket.join(msg.sala._id);
         socket.emit('room_users', sala);
-        socket.broadcast.to(msg.sala).emit('new_user', msg.usuario);
-        enviarMensagem(msg.sala, USUARIO_QTC, '\'<b>'+ msg.usuario.nome +'</b>\' entrou na sala.');
+        socket.broadcast.to(msg.sala._id).emit('new_user', msg.usuario);
+        enviarMensagem(msg.sala._id, USUARIO_QTC, '\'<b>'+ msg.usuario.nome +'</b>\' <i>entrou</i> na sala.');
       });
   });
 
   socket.on('leave', function(msg){
-    mongo.models.Sala().update({'_id': msg.sala /*'5646a5100d030fd52482b758'*/},{$pull: { usuarios: msg.usuario._id}}, function(err, sala){
+    mongo.models.Sala().update({'_id': msg.sala},{$pull: { usuarios: msg.usuario._id}}, function(err, sala){
       socket.leave(msg.sala._id);
       io.sockets.in(msg.sala._id).emit('user_quit', msg.usuario);
+      enviarMensagem(msg.sala._id, USUARIO_QTC, '\'<b>'+ msg.usuario.nome +'</b>\' <i>saiu</i> da sala.');
     });
   });
 	
